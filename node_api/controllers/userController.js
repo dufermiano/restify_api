@@ -1,6 +1,7 @@
 'use strict';
 
-const helpers = require('../config/helperFunctions');
+const helpers = require('../config/helperFunctions'),
+      UserModel = require('../models/UserModel');
 
 //Fake Database
 
@@ -41,11 +42,15 @@ module.exports = function(server){
             helpers.failure(res, next, errors, 400);
         }
 
-        let user = req.params;
-        max_users_id++;
-        user.id = max_users_id;
-        users[user.id] = user;
-        helpers.success(res, next, users);
+        let user = new UserModel();
+        user.first_name = req.params.first_name;
+        user.last_name = req.params.last_name;
+        user.user_email = req.params.user_email;
+        user.career = req.params.career;
+        user.save(function (err) {
+            helpers.failure(res, next, 'Unable to save users on the database', 500);
+        });
+        helpers.success(res, next, user);
 
     });
 
