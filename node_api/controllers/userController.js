@@ -3,30 +3,35 @@
 const helpers = require('../config/helperFunctions'),
       UserModel = require('../models/UserModel');
 
-//Fake Database
-
-let users = {};
-let max_users_id = 0;
-
 module.exports = function(server){
 
     server.get('/', (req, res, next)=>{
-        helpers.success(res, next, users);
+
+        UserModel.find({}, function (err, users) {
+            helpers.success(res, next, users);
+        });
     });
 
-    server.get('/users/:id', (req, res, next)=>{
+    server.get('/users/:id', function (req, res, next){
 
-        req.assert('id', 'Id is required and must be numeric').notEmpty().isInt();
+        req.assert('id', 'Id is required and must be numeric').notEmpty();
         let errors = req.validationErrors();
 
         if(errors){
             helpers.failure(res, next, errors[0], 400);
         }
+        UserModel.findOne({ _id: req.params.id}, function (err, user) {
 
-        if(typeof (users[req.params.id]) === 'undefined'){
-            helpers.failure(res, next, 'The user could not be found on the database', 404);
-        }
-        helpers.success(res, next, users[parseInt(req.params.id)]);
+            if(err){
+                console.log(err);
+                helpers.failure(res, next, err, 500);
+            }
+            if(user === null ){
+                helpers.failure(res, next, 'The specified user could not be found', 404);
+            }
+
+            helpers.success(res, next, user);
+        });
     });
 
     server.post('/users', (req, res, next)=>{
@@ -56,37 +61,65 @@ module.exports = function(server){
 
     server.put('/users/:id', (req, res, next)=>{
 
-        req.assert('id', 'Id is required and must be numeric').notEmpty().isInt();
+        req.assert('id', 'Id is required and must be numeric').notEmpty();
         let errors = req.validationErrors();
 
         if(errors){
             helpers.failure(res, next, errors[0], 400);
         }
-        if(typeof (users[req.params.id]) === 'undefined'){
-            helpers.failure(res, next, 'The user could not be found on the database', 404);
-        }
-        let user = users[parseInt(req.params.id)];
-        let updates = req.params;
-        for (let field in updates){
-            user[field] = updates[field];
-        }
-        helpers.success(res, next, user);
+
+        UserModel.findOne({ _id: req.params.id}, function (err, user) {
+
+            if(err){
+                console.log(err);
+                helpers.failure(res, next, err, 500);
+            }
+
+            if(user === null ){
+                helpers.failure(res, next, 'The specified user could not be found', 404);
+            }
+
+            let updates = req.params;
+            delete updates.id;
+
+            for (let field in updates){
+                user[field] = updates[field];
+            }
+
+            user.save(function (err) {
+                helpers.failure(res, next, 'Unable to save users on the database', 500);
+            });
+
+            helpers.success(res, next, user);
+        });
+
+
 
     });
 
     server.del('/users/:id', (req, res, next)=>{
-        req.assert('id', 'Id is required and must be numeric').notEmpty().isInt();
+        req.assert('id', 'Id is required and must be numeric').notEmpty();
         let errors = req.validationErrors();
 
         if(errors){
             helpers.failure(res, next, errors[0], 400);
         }
-        if(typeof (users[req.params.id]) === 'undefined'){
-            helpers.failure(res, next, 'The user could not be found on the database', 404);
-        }
-        delete users[parseInt(req.params.id)];
-        helpers.success(res, next, []);
+        UserModel.findOne({ _id: req.params.id}, function (err, user) {
 
+            if(err){
+                console.log(err);
+                helpers.failure(res, next, err, 500);
+            }
+
+            if(user === null ){
+                helpers.failure(res, next, 'The specified user could not be found', 404);
+            }
+            user.remove(function (err) {
+                helpers.failure(res, next, 'Unable to save users on the database', 500);
+            });
+
+            helpers.success(res, next, user);
+        });
     });
 };
 
